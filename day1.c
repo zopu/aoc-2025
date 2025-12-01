@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -5,7 +6,16 @@
 #define DIAL_START 50
 
 int parse_line(const char *line) {
-  int magnitude = atoi(line + 1);
+  char *endptr;
+  long magnitude = strtol(line + 1, &endptr, 10);
+  if (endptr == line + 1) {
+    fprintf(stderr, "Invalid input line: %s\n", line);
+    exit(EXIT_FAILURE);
+  }
+  if (magnitude > INT_MAX || magnitude < INT_MIN) {
+    fprintf(stderr, "Magnitude out of range: %s\n", line);
+    exit(EXIT_FAILURE);
+  }
   return (line[0] == 'L') ? -magnitude : magnitude;
 }
 
@@ -38,8 +48,7 @@ int main() {
     int new_pos = make_move(pos, move);
     part2_count += abs(move / DIAL_SIZE);
 
-    if ((pos > 0 && pos + small_move < 0) ||
-        (pos < 0 && pos + small_move > 0)) {
+    if (pos > 0 && pos + small_move < 0) {
       part2_count++;
     }
     if (pos + small_move > DIAL_SIZE) {
