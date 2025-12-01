@@ -19,7 +19,15 @@ int parse_line(const char *line) {
   return (line[0] == 'L') ? -magnitude : magnitude;
 }
 
-int make_move(int current_pos, int move) {
+int make_move(int current_pos, int move, int *crossings) {
+  *crossings = abs(move / DIAL_SIZE);
+  int mov_modded = move % DIAL_SIZE;
+  if (current_pos > 0 && current_pos + mov_modded < 0) {
+    *crossings += 1;
+  }
+  if (current_pos + mov_modded > DIAL_SIZE) {
+    *crossings += 1;
+  }
   int new_pos = (current_pos + move) % DIAL_SIZE;
   if (new_pos < 0) {
     new_pos += DIAL_SIZE;
@@ -44,21 +52,13 @@ int main() {
   char line[256];
   while (fgets(line, sizeof(line), f)) {
     int move = parse_line(line);
-    int small_move = move % DIAL_SIZE;
-    int new_pos = make_move(pos, move);
-    part2_count += abs(move / DIAL_SIZE);
-
-    if (pos > 0 && pos + small_move < 0) {
-      part2_count++;
-    }
-    if (pos + small_move > DIAL_SIZE) {
-      part2_count++;
-    }
-    pos = new_pos;
+    int crossings = 0;
+    pos = make_move(pos, move, &crossings);
     if (pos == 0) {
       part1_count++;
       part2_count++;
     }
+    part2_count += crossings;
   }
 
   printf("Part 1: %d\n", part1_count); // 964
