@@ -1,11 +1,12 @@
 #include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #define DIAL_SIZE 100
 #define DIAL_START 50
 
-int parse_line(const char *line) {
+int32_t parse_line(const char *line) {
   char *endptr;
   long magnitude = strtol(line + 1, &endptr, 10);
   if (endptr == line + 1) {
@@ -19,9 +20,9 @@ int parse_line(const char *line) {
   return (line[0] == 'L') ? -magnitude : magnitude;
 }
 
-int make_move(int current_pos, int move, int *crossings) {
+int32_t make_move(int32_t current_pos, int32_t move, uint32_t *crossings) {
   *crossings = abs(move / DIAL_SIZE);
-  int mov_modded = move % DIAL_SIZE;
+  int32_t mov_modded = move % DIAL_SIZE;
   if (current_pos > 0 && current_pos + mov_modded < 0) {
     *crossings += 1;
   }
@@ -45,14 +46,14 @@ int main() {
     return EXIT_FAILURE;
   }
 
-  int pos = DIAL_START;
-  int part1_count = 0;
-  int part2_count = 0;
+  int32_t pos = DIAL_START;
+  uint32_t part1_count = 0;
+  uint32_t part2_count = 0;
 
   char line[256];
   while (fgets(line, sizeof(line), f)) {
-    int move = parse_line(line);
-    int crossings = 0;
+    int32_t move = parse_line(line);
+    uint32_t crossings = 0;
     pos = make_move(pos, move, &crossings);
     if (pos == 0) {
       part1_count++;
