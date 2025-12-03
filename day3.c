@@ -1,29 +1,29 @@
-#include <limits.h>
-#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-static uint64_t max_embedded_num(const char *line, uint8_t digits) {
+static uint64_t pow10(size_t n) {
+  uint64_t result = 1;
+  for (size_t i = 0; i < n; i++) {
+    result *= 10;
+  }
+  return result;
+}
+
+static uint64_t max_embedded_num(const char *line, size_t digits) {
   if (digits == 0) {
     return 0;
   }
-  // Scan and find the earliest position with the max digit
-  // that's still digits places from the end.
   const char *ptr = line;
-
-  char max_digit = 0;
-  const char *max_digit_ptr = NULL;
+  const char *max = ptr;
   while (ptr[digits - 1] != '\0' && ptr[digits - 1] != '\n') {
-    char digit = *ptr - '0';
-    if (digit > max_digit) {
-      max_digit = digit;
-      max_digit_ptr = ptr;
+    if (*ptr > *max) {
+      max = ptr;
     }
     ptr++;
   }
-  return max_digit * pow(10, digits - 1) +
-         max_embedded_num(max_digit_ptr + 1, digits - 1);
+  return (*max - '0') * pow10(digits - 1) +
+         max_embedded_num(max + 1, digits - 1);
 }
 
 int main() {
