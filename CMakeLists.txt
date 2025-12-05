@@ -19,3 +19,7 @@ add_executable(day4
     src/day4.c
     src/common/grid.c
 )
+
+add_executable(day5
+    src/day5.c
+)
