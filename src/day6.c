@@ -1,5 +1,6 @@
 #include <limits.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,6 +15,7 @@ struct Tallys {
   uint64_t sums[MAX_NUMS_PER_LINE];
   uint64_t products[MAX_NUMS_PER_LINE];
   uint64_t column_nums[MAX_COLUMNS];
+  size_t max_line_length;
 };
 
 struct Tallys new_tallys() {
@@ -25,6 +27,7 @@ struct Tallys new_tallys() {
   for (size_t i = 0; i < MAX_COLUMNS; i++) {
     t.column_nums[i] = 0;
   }
+  t.max_line_length = 0;
   return t;
 }
 
@@ -38,6 +41,24 @@ void update_column_nums(const char *line, uint64_t *column_nums) {
     }
     ptr++;
     col++;
+  }
+}
+
+void process_num_line(const char *line, struct Tallys *tallys) {
+  size_t len = strlen(line);
+  if (len > tallys->max_line_length) {
+    tallys->max_line_length = len;
+  }
+  update_column_nums(line, tallys->column_nums);
+  uint32_t nums[MAX_NUMS_PER_LINE];
+  const char *ptr = line;
+  size_t count = 0;
+  while (strpbrk(ptr, DIGITS)) {
+    nums[count++] = strtoul(ptr, (char **)&ptr, 10);
+  }
+  for (size_t i = 0; i < count; i++) {
+    tallys->products[i] *= nums[i];
+    tallys->sums[i] += nums[i];
   }
 }
 
@@ -83,30 +104,13 @@ int main() {
 
   char line[MAX_COLUMNS];
   struct Tallys tallys = new_tallys();
-  size_t max_line_length = 0;
   while (fgets(line, sizeof(line), f)) {
     if (strpbrk(line, OPERATORS)) {
       process_op_line(line, &tallys);
       break;
     }
-
-    size_t len = strlen(line);
-    if (len > max_line_length) {
-      max_line_length = len;
-    }
-    update_column_nums(line, tallys.column_nums);
-    uint32_t nums[MAX_NUMS_PER_LINE];
-    char *ptr = line;
-    size_t count = 0;
-    while (strpbrk(ptr, DIGITS)) {
-      nums[count++] = strtoul(ptr, &ptr, 10);
-    }
-    for (size_t i = 0; i < count; i++) {
-      tallys.sums[i] += nums[i];
-      tallys.products[i] *= nums[i];
-    }
+    process_num_line(line, &tallys);
   }
-
   fclose(f);
   return EXIT_SUCCESS;
 }
