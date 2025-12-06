@@ -5,32 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define DIGITS "0123456789"
 #define MAX_COLUMNS 4000
 #define MAX_NUMS_PER_LINE 4000
-
-bool line_has_more_nums(const char *line) {
-  const char *ptr = line;
-  while (*ptr != '\0') {
-    if (*ptr >= '0' && *ptr <= '9') {
-      return true;
-    }
-    ptr++;
-  }
-  return false;
-}
-
-bool read_next_operator(const char **line_ptr, char *operator) {
-  const char *ptr = *line_ptr;
-  while (*ptr != '\0') {
-    if (*ptr == '+' || *ptr == '*') {
-      *operator = *ptr;
-      *line_ptr = ptr + 1;
-      return true;
-    }
-    ptr++;
-  }
-  return false;
-}
 
 void update_column_nums(const char *line, uint64_t *column_nums) {
   const char *ptr = line;
@@ -76,19 +53,20 @@ int main() {
       max_line_length = len;
     }
     size_t count = 0;
-    if (!line_has_more_nums(line)) {
+    if (!strpbrk(line, DIGITS)) {
       // Compute the grand total
       const char *ptr = line;
-      char operator;
-      while (read_next_operator(&ptr, &operator)) {
-        if (operator == '+') {
+      char *op;
+      while ((op = strpbrk(ptr, "+*"))) {
+        ptr = op + 1;
+        if (*op == '+') {
           p1_result += sums[count++];
           size_t i = ptr - line - 1;
           while (column_nums[i] != 0) {
             p2_result += column_nums[i];
             i++;
           }
-        } else if (operator == '*') {
+        } else if (*op == '*') {
           p1_result += products[count++];
           size_t i = ptr - line - 1;
           uint64_t product = 1;
@@ -104,7 +82,7 @@ int main() {
     update_column_nums(line, column_nums);
     uint32_t nums[MAX_NUMS_PER_LINE];
     char *ptr = line;
-    while (line_has_more_nums(ptr)) {
+    while (strpbrk(ptr, DIGITS)) {
       nums[count++] = strtoul(ptr, &ptr, 10);
     }
     for (size_t i = 0; i < count; i++) {
