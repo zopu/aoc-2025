@@ -6,6 +6,7 @@
 #include <string.h>
 
 #define DIGITS "0123456789"
+#define OPERATORS "+*"
 #define MAX_COLUMNS 4000
 #define MAX_NUMS_PER_LINE 4000
 
@@ -19,6 +20,34 @@ void update_column_nums(const char *line, uint64_t *column_nums) {
     }
     ptr++;
     col++;
+  }
+}
+
+void process_op_line(const char *line, uint64_t *column_nums,
+                     const uint64_t *sums, const uint64_t *products,
+                     uint64_t *p1_result, uint64_t *p2_result) {
+  size_t count = 0;
+  const char *ptr = line;
+  char *op;
+  while ((op = strpbrk(ptr, OPERATORS))) {
+    ptr = op + 1;
+    if (*op == '+') {
+      *p1_result += sums[count++];
+      size_t i = ptr - line - 1;
+      while (column_nums[i] != 0) {
+        *p2_result += column_nums[i];
+        i++;
+      }
+    } else if (*op == '*') {
+      *p1_result += products[count++];
+      size_t i = ptr - line - 1;
+      uint64_t product = 1;
+      while (column_nums[i] != 0) {
+        product *= column_nums[i];
+        i++;
+      }
+      *p2_result += product;
+    }
   }
 }
 
@@ -48,40 +77,20 @@ int main() {
   uint64_t p2_result = 0;
   size_t max_line_length = 0;
   while (fgets(line, sizeof(line), f)) {
+    if (strpbrk(line, OPERATORS)) {
+      process_op_line(line, column_nums, sums, products, &p1_result,
+                      &p2_result);
+      break;
+    }
+
     size_t len = strlen(line);
     if (len > max_line_length) {
       max_line_length = len;
     }
-    size_t count = 0;
-    if (!strpbrk(line, DIGITS)) {
-      // Compute the grand total
-      const char *ptr = line;
-      char *op;
-      while ((op = strpbrk(ptr, "+*"))) {
-        ptr = op + 1;
-        if (*op == '+') {
-          p1_result += sums[count++];
-          size_t i = ptr - line - 1;
-          while (column_nums[i] != 0) {
-            p2_result += column_nums[i];
-            i++;
-          }
-        } else if (*op == '*') {
-          p1_result += products[count++];
-          size_t i = ptr - line - 1;
-          uint64_t product = 1;
-          while (column_nums[i] != 0) {
-            product *= column_nums[i];
-            i++;
-          }
-          p2_result += product;
-        }
-      }
-      break;
-    }
     update_column_nums(line, column_nums);
     uint32_t nums[MAX_NUMS_PER_LINE];
     char *ptr = line;
+    size_t count = 0;
     while (strpbrk(ptr, DIGITS)) {
       nums[count++] = strtoul(ptr, &ptr, 10);
     }
