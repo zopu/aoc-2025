@@ -10,6 +10,24 @@
 #define MAX_COLUMNS 4000
 #define MAX_NUMS_PER_LINE 4000
 
+struct Tallys {
+  uint64_t sums[MAX_NUMS_PER_LINE];
+  uint64_t products[MAX_NUMS_PER_LINE];
+  uint64_t column_nums[MAX_COLUMNS];
+};
+
+struct Tallys new_tallys() {
+  struct Tallys t;
+  for (size_t i = 0; i < MAX_NUMS_PER_LINE; i++) {
+    t.sums[i] = 0;
+    t.products[i] = 1;
+  }
+  for (size_t i = 0; i < MAX_COLUMNS; i++) {
+    t.column_nums[i] = 0;
+  }
+  return t;
+}
+
 void update_column_nums(const char *line, uint64_t *column_nums) {
   const char *ptr = line;
   size_t col = 0;
@@ -23,32 +41,34 @@ void update_column_nums(const char *line, uint64_t *column_nums) {
   }
 }
 
-void process_op_line(const char *line, uint64_t *column_nums,
-                     const uint64_t *sums, const uint64_t *products,
-                     uint64_t *p1_result, uint64_t *p2_result) {
+void process_op_line(const char *line, struct Tallys *tallys) {
+  uint64_t p1_result = 0;
+  uint64_t p2_result = 0;
   size_t count = 0;
   const char *ptr = line;
   char *op;
   while ((op = strpbrk(ptr, OPERATORS))) {
     ptr = op + 1;
     if (*op == '+') {
-      *p1_result += sums[count++];
+      p1_result += tallys->sums[count++];
       size_t i = ptr - line - 1;
-      while (column_nums[i] != 0) {
-        *p2_result += column_nums[i];
+      while (tallys->column_nums[i] != 0) {
+        p2_result += tallys->column_nums[i];
         i++;
       }
     } else if (*op == '*') {
-      *p1_result += products[count++];
+      p1_result += tallys->products[count++];
       size_t i = ptr - line - 1;
       uint64_t product = 1;
-      while (column_nums[i] != 0) {
-        product *= column_nums[i];
+      while (tallys->column_nums[i] != 0) {
+        product *= tallys->column_nums[i];
         i++;
       }
-      *p2_result += product;
+      p2_result += product;
     }
   }
+  printf("Part 1: %llu\n", p1_result); // 6343365546996
+  printf("Part 2: %llu\n", p2_result); // 11136895955912
 }
 
 int main() {
@@ -62,24 +82,11 @@ int main() {
   }
 
   char line[MAX_COLUMNS];
-  uint64_t sums[MAX_NUMS_PER_LINE];
-  uint64_t products[MAX_NUMS_PER_LINE];
-  uint64_t part1_total = 0;
-  for (size_t i = 0; i < MAX_NUMS_PER_LINE; i++) {
-    sums[i] = 0;
-    products[i] = 1;
-  }
-  uint64_t column_nums[MAX_COLUMNS];
-  for (size_t i = 0; i < MAX_COLUMNS; i++) {
-    column_nums[i] = 0;
-  }
-  uint64_t p1_result = 0;
-  uint64_t p2_result = 0;
+  struct Tallys tallys = new_tallys();
   size_t max_line_length = 0;
   while (fgets(line, sizeof(line), f)) {
     if (strpbrk(line, OPERATORS)) {
-      process_op_line(line, column_nums, sums, products, &p1_result,
-                      &p2_result);
+      process_op_line(line, &tallys);
       break;
     }
 
@@ -87,7 +94,7 @@ int main() {
     if (len > max_line_length) {
       max_line_length = len;
     }
-    update_column_nums(line, column_nums);
+    update_column_nums(line, tallys.column_nums);
     uint32_t nums[MAX_NUMS_PER_LINE];
     char *ptr = line;
     size_t count = 0;
@@ -95,13 +102,10 @@ int main() {
       nums[count++] = strtoul(ptr, &ptr, 10);
     }
     for (size_t i = 0; i < count; i++) {
-      sums[i] += nums[i];
-      products[i] *= nums[i];
+      tallys.sums[i] += nums[i];
+      tallys.products[i] *= nums[i];
     }
   }
-
-  printf("Part 1: %llu\n", p1_result); // 6343365546996
-  printf("Part 2: %llu\n", p2_result); // 11136895955912
 
   fclose(f);
   return EXIT_SUCCESS;
