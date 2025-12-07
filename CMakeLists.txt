@@ -27,3 +27,7 @@ add_executable(day5
 add_executable(day6
     src/day6.c
 )
+
+add_executable(day7
+    src/day7.c
+)
