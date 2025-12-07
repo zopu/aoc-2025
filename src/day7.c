@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -18,22 +19,21 @@ int main() {
 
   uint64_t beams[MAX_LINE_LENGTH];
   uint64_t beams_next[MAX_LINE_LENGTH];
-  memset(beams, 0, sizeof(beams));
-  memset(beams_next, 0, sizeof(beams));
 
   char line[MAX_LINE_LENGTH];
+
+  // First get the top line with the 'S' and use it to measure the line length.
   fgets(line, sizeof(line), f);
-  size_t i = 0;
-  while (line[i] != '\0') {
-    if (line[i] == 'S')
-      beams[i] = 1;
-    i++;
-  }
-  size_t line_len = i;
+  size_t line_len = strlen(line);
+  size_t line_len_bytes = line_len * sizeof(uint64_t);
+  memset(beams, 0, line_len_bytes);
+  memset(beams_next, 0, line_len_bytes);
+  size_t s_loc = strchr(line, 'S') - line;
+  beams[s_loc] = 1;
+  beams_next[s_loc] = 1;
 
   uint32_t split_count = 0;
   while (fgets(line, sizeof(line), f)) {
-    memset(beams_next, 0, sizeof(beams));
     for (size_t i = 0; line[i] != '\0'; ++i) {
       if (line[i] == '^') {
         beams_next[i] = 0;
@@ -44,11 +44,9 @@ int main() {
           if (i < line_len)
             beams_next[i + 1] += beams[i];
         }
-      } else if (beams[i] > 0) {
-        beams_next[i] += beams[i];
       }
     }
-    memcpy(beams, beams_next, sizeof(beams));
+    memcpy(beams, beams_next, line_len_bytes);
   }
 
   uint64_t p2_sum = 0;
@@ -56,8 +54,8 @@ int main() {
     p2_sum += beams[i];
   }
 
-  printf("Part 1: %d\n", split_count); // 1507
-  printf("Part 2: %llu\n", p2_sum);    // 1537373473728
+  printf("Part 1: %" PRIu32 "\n", split_count); // 1507
+  printf("Part 2: %" PRIu64 "\n", p2_sum);      // 1537373473728
 
   fclose(f);
   return EXIT_SUCCESS;
