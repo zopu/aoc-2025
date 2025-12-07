@@ -1,5 +1,4 @@
 #include <inttypes.h>
-#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,12 +22,21 @@ int main() {
   char line[MAX_LINE_LENGTH];
 
   // First get the top line with the 'S' and use it to measure the line length.
-  fgets(line, sizeof(line), f);
-  size_t line_len = strlen(line);
+  if (!fgets(line, sizeof(line), f)) {
+    fclose(f);
+    return EXIT_FAILURE;
+  }
+  size_t line_len = strlen(line) - 1; // Take off the \n
   size_t line_len_bytes = line_len * sizeof(uint64_t);
   memset(beams, 0, line_len_bytes);
   memset(beams_next, 0, line_len_bytes);
-  size_t s_loc = strchr(line, 'S') - line;
+  char *s_ptr = strchr(line, 'S');
+  if (!s_ptr) {
+    fprintf(stderr, "No 'S' on first line!\n");
+    fclose(f);
+    return EXIT_FAILURE;
+  }
+  size_t s_loc = s_ptr - line;
   beams[s_loc] = 1;
   beams_next[s_loc] = 1;
 
@@ -41,7 +49,7 @@ int main() {
           split_count++;
           if (i > 0)
             beams_next[i - 1] += beams[i];
-          if (i < line_len)
+          if (i + 1 < line_len)
             beams_next[i + 1] += beams[i];
         }
       }
