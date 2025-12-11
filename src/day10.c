@@ -1,5 +1,6 @@
 #include <inttypes.h>
 #include <limits.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -50,7 +51,6 @@ uint16_t consume_next_button(const char **ptr) {
 }
 
 void parse_machine(const char *line, struct Machine *m) {
-  printf("%s", line);
   size_t len = strlen(line);
 
   uint16_t light_spec = 0;
@@ -70,17 +70,65 @@ void parse_machine(const char *line, struct Machine *m) {
   skip_spaces(&ptr);
   while (*ptr == '(') {
     uint16_t btn = consume_next_button(&ptr);
-    printf("Got button %d\n", btn);
     skip_spaces(&ptr);
     m->buttons[m->num_buttons++] = btn;
   }
 }
 
-uint64_t fewest_presses(struct Machine *m) { return 1; }
+// In practice the search tends to come back to a relatively small set
+// of states, so keep a small cache to stop repeating work.
+#define SEEN_CACHE_SIZE 10000
+
+struct SearchState {
+  size_t count;
+  uint16_t lights;
+};
+
+uint64_t fewest_presses(struct Machine *m) {
+  uint16_t seen_cache[SEEN_CACHE_SIZE];
+  memset(&seen_cache, 0, sizeof(seen_cache));
+  size_t seen_cache_ptr = 0;
+
+  struct SearchState *queue =
+      (struct SearchState *)malloc(sizeof(struct SearchState) * 10000);
+  size_t queue_cnt = 1;
+  size_t queue_ptr = 0;
+
+  queue[0] = (struct SearchState){.lights = 0, .count = 0};
+  while (true) {
+    uint16_t state = queue[queue_ptr].lights;
+    size_t cnt = queue[queue_ptr].count;
+    queue_ptr++;
+    if (state == m->light_spec) {
+      free(queue);
+      return cnt;
+    }
+    for (int i = 0; i < m->num_buttons; i++) {
+      struct SearchState ss = (struct SearchState){
+          .lights = state ^ m->buttons[i], .count = cnt + 1};
+      bool seen = false;
+      for (int j = 0; j < seen_cache_ptr; j++) {
+        if (seen_cache[j] == ss.lights) {
+          seen = true;
+        }
+      }
+      if (seen == true) {
+        continue;
+      }
+      queue[queue_cnt++] = ss;
+      if (seen_cache_ptr < SEEN_CACHE_SIZE) {
+        seen_cache[seen_cache_ptr++] = ss.lights;
+      }
+    }
+  }
+  free(queue);
+  return UINT64_MAX;
+}
 
 int main() {
-  const char *input_path = "input/samples/day10_1.txt";
-  // const char *input_path = "input/real/day10_1.txt";
+  // const char *input_path = "input/samples/day10_1.txt";
+  const char *input_path = "input/real/day10_1.txt";
+  // const char *input_path = "input/tests/day10_1.txt";
 
   FILE *f = fopen(input_path, "r");
   if (!f) {
@@ -93,8 +141,8 @@ int main() {
   while (fgets(line, sizeof(line), f)) {
     struct Machine *m = (struct Machine *)malloc(sizeof(struct Machine));
     parse_machine(line, m);
-    printf("%d\n", m->light_spec);
-    sum += fewest_presses(m);
+    uint64_t fp = fewest_presses(m);
+    sum += fp;
     free(m);
   }
 
